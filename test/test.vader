@@ -1,0 +1,45 @@
+Given ():
+  package foo;
+  
+  import java.util.Arrays; 
+  import java.util.List; 
+
+  import org.apache.log4j.Logger;
+
+  import org.apache.commons.lang3.StringUtils;
+
+  public class FOO {
+Execute (function to get the blocks):
+  let blocks=imports#getblocks()
+Then(Assert blocks are well defined):
+  Assert stridx(blocks[0], "Arrays;") > -1
+  Assert stridx(blocks[0], "java.util.List;") > -1
+  Assert stridx(blocks[1], "Logger;") > -1
+  Assert stridx(blocks[2], "StringUtils;") > -1
+  Assert len(split(blocks[0], '#')) == 2
+
+Given (some imports):
+  package foo;
+  
+  import java.util.Arrays; 
+  import java.util.List; 
+
+  import org.apache.log4j.Logger;
+
+  import org.apache.commons.lang3.StringUtils;
+
+  public class FOO {
+Execute (get blocks definitions):
+  let imports = imports#import_data()
+Then (import definition is accurate):
+  Assert imports[0]['line'] == 3
+  Assert imports[3]['line'] == 8
+  Assert imports[0]['class'] == 'java.util.Arrays'
+  Assert imports[3]['class'] == 'org.apache.commons.lang3.StringUtils'
+   
+Execute (define imports, select line):
+  let imports = [{'line': 3, 'class': 'java.util.Arrays'}]
+  call add(imports, {'line': 4, 'class': 'java.util.List'})
+  let line = imports#find_import_line(imports, 'java.util.Deque')
+Then (correct line selected):
+  Assert line == 4
