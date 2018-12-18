@@ -30,6 +30,29 @@ function! imports#scan_file_line(line) abort "{{{
     return 1
 endfunction "}}}
 
+function! imports#find_import_line(imports_list, next_import) abort "{{{
+
+    let imports = map(copy(a:imports_list), 'extend(v:val, {"score": 0})')
+
+    for import_index in range(len(a:imports_list))
+        let current = imports[import_index]
+        if current['class'] < a:next_import
+            let current['score'] += import_index
+            if import_index + 1 < len(imports) && imports[import_index+1]['class'] > a:next_import
+                let current['score'] += len(imports)
+            endif
+        endif
+    endfor
+
+    call sort(imports, "imports#sort_by_score")
+
+    return imports[0]['line']+1
+endfunction "}}}
+
+function! imports#sort_by_score(one, another) abort "{{{
+    return a:another['score'] - a:one['score']
+endfunction "}}}
+
 function! imports#getblocks() abort "{{{
     let class_dec = searchpos('^public class', 'bwnc')[0]
     let pack_dec = searchpos('^package', 'bnc')[0]

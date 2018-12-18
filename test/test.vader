@@ -29,7 +29,7 @@ Given (some imports):
   import org.apache.commons.lang3.StringUtils;
 
   public class FOO {
-Execute (get blocks definitions):
+Execute (get import data):
   let imports = imports#import_data()
 Then (import definition is accurate):
   Assert imports[0]['line'] == 3
@@ -41,5 +41,7 @@ Execute (define imports, select line):
   let imports = [{'line': 3, 'class': 'java.util.Arrays'}]
   call add(imports, {'line': 4, 'class': 'java.util.List'})
   let line = imports#find_import_line(imports, 'java.util.Deque')
+  let line2 = imports#find_import_line(imports, 'java.util.Set')
 Then (correct line selected):
   Assert line == 4
+  Assert line2 == 5
