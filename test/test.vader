@@ -1,4 +1,4 @@
-Given ():
+Given (an example of imports):
   package foo;
   
   import java.util.Arrays; 
@@ -40,8 +40,71 @@ Then (import definition is accurate):
 Execute (define imports, select line):
   let imports = [{'line': 3, 'class': 'java.util.Arrays'}]
   call add(imports, {'line': 4, 'class': 'java.util.List'})
-  let line = imports#find_import_line(imports, 'java.util.Deque')
-  let line2 = imports#find_import_line(imports, 'java.util.Set')
-Then (correct line selected):
-  Assert line == 4
-  Assert line2 == 5
+  let desc = imports#find_import_desc(imports, 'java.util.Deque')
+  let desc_2 = imports#find_import_desc(imports, 'java.util.Set')
+  let desc_3 = imports#find_import_desc(imports, 'org.slf4j.Logger')
+Then (correct context returned):
+  Assert desc['linebefore'] == 3
+  Assert desc['appendemptyline'] == 0
+  Assert desc_2['linebefore'] == 4
+  Assert desc_3['appendemptyline'] == 1
+  Assert desc_3['classtoinsert'] == 'org.slf4j.Logger'
+
+Given (imports):
+  package foo;
+  import java.util.Arrays;
+  import java.util.Dequeue;
+  public class Foo {
+Execute(insert imports correctly):
+  call imports#insert_import_context({
+    \ 'linebefore': 1,
+    \ 'appendemptyline': 1,
+    \ 'classtoinsert': 'org.junit.Ignore'
+    \ })
+  call imports#insert_import_context({
+    \ 'linebefore': 5,
+    \ 'appendemptyline': 0,
+    \ 'classtoinsert': 'org.log4j.Logger'
+    \ })
+Expect:
+  package foo;
+
+  import org.junit.Ignore;
+  import java.util.Arrays;
+  import java.util.Dequeue;
+  import org.log4j.Logger;
+  public class Foo {
+
+Given (current complete example):
+  package current.complete.example;
+
+  import java.util.Arrays;
+  import java.util.Collections;
+  import java.util.HashSet;
+
+  public class CompleteClazz {
+  }
+Execute (get context, then insert):
+  let import_context = imports#find_import_desc(imports#import_data(),
+    \ 'java.util.Set')
+  call imports#insert_import_context(import_context)
+  let import_context = imports#find_import_desc(imports#import_data(),
+    \ 'org.springframework.stereotype.Controller')
+  call imports#insert_import_context(import_context)
+  let import_context = imports#find_import_desc(imports#import_data(),
+    \ 'org.slf4j.Logger')
+  call imports#insert_import_context(import_context)
+Expect (imports are inserted as expected):
+  package current.complete.example;
+
+  import java.util.Arrays;
+  import java.util.Collections;
+  import java.util.HashSet;
+  import java.util.Set;
+
+  import org.slf4j.Logger;
+
+  import org.springframework.stereotype.Controller;
+
+  public class CompleteClazz {
+  }

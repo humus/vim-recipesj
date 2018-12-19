@@ -1,6 +1,5 @@
 
 function! imports#import_data() abort "{{{
-
     let l:current_line = 1
     let l:imports = []
     while imports#scan_file_line(l:current_line)
@@ -30,8 +29,7 @@ function! imports#scan_file_line(line) abort "{{{
     return 1
 endfunction "}}}
 
-function! imports#find_import_line(imports_list, next_import) abort "{{{
-
+function! imports#find_import_desc(imports_list, next_import) abort "{{{
     let imports = map(copy(a:imports_list), 'extend(v:val, {"score": 0})')
 
     for import_index in range(len(a:imports_list))
@@ -45,8 +43,12 @@ function! imports#find_import_line(imports_list, next_import) abort "{{{
     endfor
 
     call sort(imports, "imports#sort_by_score")
+    let linebefore = imports[0]['line']
+    let empty_line = imports#needs_empty_line(imports, linebefore, a:next_import)
 
-    return imports[0]['line']+1
+    return {'linebefore': linebefore,
+                \ 'appendemptyline': empty_line,
+                \ 'classtoinsert': a:next_import}
 endfunction "}}}
 
 function! imports#sort_by_score(one, another) abort "{{{
@@ -78,3 +80,28 @@ function! imports#getblocks() abort "{{{
 
 endfunction "}}}
 
+function! imports#needs_empty_line(imports, linebefore, next_import) "{{{
+    let import_desc = filter(copy(a:imports), "v:val['line'] == " . a:linebefore)[0]
+    let components = split(a:next_import, '\.', 0)
+    let components_2 = split(import_desc['class'], '\.', 0)
+    
+    if components[0] != components_2[0]
+        return 1
+    endif
+    
+    if components[1] != components_2[1]
+        return 1
+    endif
+
+    return 0
+endfunction "}}}
+
+fun! imports#insert_import_context(import_context) abort "{{{
+    let import_line = 'import ' . a:import_context['classtoinsert'] . ';'
+    let offset = 0
+    if a:import_context['appendemptyline']
+        let offset = 1
+        call append(a:import_context['linebefore'], '')
+    endif
+    call append(a:import_context['linebefore']+offset, import_line)
+endfunction "}}}
