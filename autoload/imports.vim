@@ -5,16 +5,18 @@ function! imports#import_data() abort "{{{
     while imports#scan_file_line(l:current_line)
         if getline(l:current_line) =~ '^import'
             let l:import = {'line': l:current_line}
-            let l:import['class'] = matchstr(getline(l:current_line), '\v^import\s+\zs\S[^;]+\ze;')
+            let l:import['class'] = imports#class_from_import_line(l:current_line)
             call add(l:imports, l:import)
         endif
         let l:current_line += 1
     endwhile
 
-    echo l:imports[0]['class']
-
     return l:imports
 endfunction "}}}
+
+function! imports#class_from_import_line(line_number) "{{{
+    return matchstr(getline(a:line_number), '\v^import\s+\zs\S[^;]+\ze;')
+endfunction"}}}
 
 function! imports#scan_file_line(line) abort "{{{
     if getline(a:line) =~ '\v(^\@|public class)'
@@ -29,14 +31,14 @@ function! imports#scan_file_line(line) abort "{{{
     return 1
 endfunction "}}}
 
-function! imports#find_import_desc(imports_list, next_import) abort "{{{
+function! imports#get_import_context(imports_list, class_to_import) abort "{{{
     let imports = map(copy(a:imports_list), 'extend(v:val, {"score": 0})')
 
     for import_index in range(len(a:imports_list))
         let current = imports[import_index]
-        if current['class'] < a:next_import
+        if current['class'] < a:class_to_import
             let current['score'] += import_index
-            if import_index + 1 < len(imports) && imports[import_index+1]['class'] > a:next_import
+            if import_index + 1 < len(imports) && imports[import_index+1]['class'] > a:class_to_import
                 let current['score'] += len(imports)
             endif
         endif
@@ -44,15 +46,29 @@ function! imports#find_import_desc(imports_list, next_import) abort "{{{
 
     call sort(imports, "imports#sort_by_score")
     let linebefore = imports[0]['line']
-    let empty_line = imports#needs_empty_line(imports, linebefore, a:next_import)
+    let empty_line = imports#needs_empty_line(imports, linebefore, a:class_to_import)
+    let is_dup = imports#is_dup(linebefore, a:class_to_import)
+
 
     return {'linebefore': linebefore,
                 \ 'appendemptyline': empty_line,
-                \ 'classtoinsert': a:next_import}
+                \ 'classtoinsert': a:class_to_import,
+                \ 'dup': is_dup}
 endfunction "}}}
 
 function! imports#sort_by_score(one, another) abort "{{{
     return a:another['score'] - a:one['score']
+endfunction "}}}
+
+fun! imports#is_dup(linebefore, class_to_import) "{{{
+    let start_line = a:linebefore
+    let end_line = a:linebefore + 3
+    let lines = []
+    for line_number in range(start_line, end_line)
+        call add(lines, imports#class_from_import_line(line_number))
+    endfor
+
+    return !empty(filter(lines, "v:val !~ '\v^\s*$' && v:val == '" . a:class_to_import . "'"))
 endfunction "}}}
 
 function! imports#getblocks() abort "{{{
@@ -80,9 +96,9 @@ function! imports#getblocks() abort "{{{
 
 endfunction "}}}
 
-function! imports#needs_empty_line(imports, linebefore, next_import) "{{{
+function! imports#needs_empty_line(imports, linebefore, class_to_import) "{{{
     let import_desc = filter(copy(a:imports), "v:val['line'] == " . a:linebefore)[0]
-    let components = split(a:next_import, '\.', 0)
+    let components = split(a:class_to_import, '\.', 0)
     let components_2 = split(import_desc['class'], '\.', 0)
     
     if components[0] != components_2[0]
@@ -97,6 +113,9 @@ function! imports#needs_empty_line(imports, linebefore, next_import) "{{{
 endfunction "}}}
 
 fun! imports#insert_import_context(import_context) abort "{{{
+    if a:import_context['dup']
+        return
+    endif
     let import_line = 'import ' . a:import_context['classtoinsert'] . ';'
     let offset = 0
     if a:import_context['appendemptyline']

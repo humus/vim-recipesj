@@ -37,18 +37,18 @@ Then (import definition is accurate):
   Assert imports[0]['class'] == 'java.util.Arrays'
   Assert imports[3]['class'] == 'org.apache.commons.lang3.StringUtils'
    
-Execute (define imports, select line):
+Execute (define imports with context):
   let imports = [{'line': 3, 'class': 'java.util.Arrays'}]
   call add(imports, {'line': 4, 'class': 'java.util.List'})
-  let desc = imports#find_import_desc(imports, 'java.util.Deque')
-  let desc_2 = imports#find_import_desc(imports, 'java.util.Set')
-  let desc_3 = imports#find_import_desc(imports, 'org.slf4j.Logger')
+  let context = imports#get_import_context(imports, 'java.util.Deque')
+  let context_2 = imports#get_import_context(imports, 'java.util.Set')
+  let context_3 = imports#get_import_context(imports, 'org.slf4j.Logger')
 Then (correct context returned):
-  Assert desc['linebefore'] == 3
-  Assert desc['appendemptyline'] == 0
-  Assert desc_2['linebefore'] == 4
-  Assert desc_3['appendemptyline'] == 1
-  Assert desc_3['classtoinsert'] == 'org.slf4j.Logger'
+  Assert context['linebefore'] == 3
+  Assert context['appendemptyline'] == 0
+  Assert context_2['linebefore'] == 4
+  Assert context_3['appendemptyline'] == 1
+  Assert context_3['classtoinsert'] == 'org.slf4j.Logger'
 
 Given (imports):
   package foo;
@@ -59,12 +59,14 @@ Execute(insert imports correctly):
   call imports#insert_import_context({
     \ 'linebefore': 1,
     \ 'appendemptyline': 1,
-    \ 'classtoinsert': 'org.junit.Ignore'
+    \ 'classtoinsert': 'org.junit.Ignore',
+    \ 'dup': 0
     \ })
   call imports#insert_import_context({
     \ 'linebefore': 5,
     \ 'appendemptyline': 0,
-    \ 'classtoinsert': 'org.log4j.Logger'
+    \ 'classtoinsert': 'org.log4j.Logger',
+    \ 'dup': 0
     \ })
 Expect:
   package foo;
@@ -74,6 +76,21 @@ Expect:
   import java.util.Dequeue;
   import org.log4j.Logger;
   public class Foo {
+
+Given (example with dups):
+  package foo
+  
+  import java.util.List;
+  import java.util.HashSet;
+  import java.util.Set;
+
+  public class Foo {
+  }
+
+Execute (get context, then insert):
+  let import_context = imports#get_import_context(imports#import_data(),
+    \ 'java.util.Set')
+  Assert import_context['dup'] == 1
 
 Given (current complete example):
   package current.complete.example;
@@ -85,13 +102,19 @@ Given (current complete example):
   public class CompleteClazz {
   }
 Execute (get context, then insert):
-  let import_context = imports#find_import_desc(imports#import_data(),
+  let import_context = imports#get_import_context(imports#import_data(),
     \ 'java.util.Set')
   call imports#insert_import_context(import_context)
-  let import_context = imports#find_import_desc(imports#import_data(),
+  let import_context = imports#get_import_context(imports#import_data(),
     \ 'org.springframework.stereotype.Controller')
   call imports#insert_import_context(import_context)
-  let import_context = imports#find_import_desc(imports#import_data(),
+  let import_context = imports#get_import_context(imports#import_data(),
+    \ 'org.springframework.stereotype.Controller')
+  call imports#insert_import_context(import_context)
+  let import_context = imports#get_import_context(imports#import_data(),
+    \ 'org.slf4j.Logger')
+  call imports#insert_import_context(import_context)
+  let import_context = imports#get_import_context(imports#import_data(),
     \ 'org.slf4j.Logger')
   call imports#insert_import_context(import_context)
 Expect (imports are inserted as expected):
@@ -108,3 +131,4 @@ Expect (imports are inserted as expected):
 
   public class CompleteClazz {
   }
+
