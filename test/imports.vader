@@ -109,9 +109,6 @@ Execute (get context, then insert):
     \ 'org.springframework.stereotype.Controller')
   call imports#insert_import_context(import_context)
   let import_context = imports#get_import_context(imports#import_data(),
-    \ 'org.springframework.stereotype.Controller')
-  call imports#insert_import_context(import_context)
-  let import_context = imports#get_import_context(imports#import_data(),
     \ 'org.slf4j.Logger')
   call imports#insert_import_context(import_context)
   let import_context = imports#get_import_context(imports#import_data(),
@@ -132,3 +129,73 @@ Expect (imports are inserted as expected):
   public class CompleteClazz {
   }
 
+Given (insert in one go example):
+  package current.complete.example;
+
+  import java.util.Arrays;
+  import java.util.Collections;
+  import java.util.HashSet;
+  import java.util.Set;
+
+  public class CompleteClazz {
+  }
+
+Execute (insert a new import):
+  call imports#insert_import('java.util.stream.Collectors')
+
+Expect (import inserted):
+  package current.complete.example;
+
+  import java.util.Arrays;
+  import java.util.Collections;
+  import java.util.HashSet;
+  import java.util.Set;
+  import java.util.stream.Collectors;
+
+  public class CompleteClazz {
+  }
+
+Given (not insert new line when single import in group found):
+  package current.complete.example;
+
+  import java.util.Set;
+
+  public class CompleteClazz {
+  }
+Execute(insert the import):
+  call imports#insert_import('java.util.HashSet')
+Expect:
+  package current.complete.example;
+
+  import java.util.HashSet;
+  import java.util.Set;
+
+  public class CompleteClazz {
+  }
+
+Given(bad sorting repeated):
+  package current.complete.example;
+  
+  import java.util.List;
+  
+  import org.springframework.http.HttpEntity;¬
+  import org.springframework.beans.factory.annotation.Qualifier;¬
+  import org.springframework.beans.factory.annotation.Autowired;¬
+  
+  public class CompleteClazz {
+  }
+  
+Execute(attempt insert dupplicate):
+  call imports#insert_import('org.springframework.beans.factory.annotation.Autowired')
+Expect:
+  package current.complete.example;
+  
+  import java.util.List;
+  
+  import org.springframework.http.HttpEntity;¬
+  import org.springframework.beans.factory.annotation.Qualifier;¬
+  import org.springframework.beans.factory.annotation.Autowired;¬
+  
+  public class CompleteClazz {
+  }
+  

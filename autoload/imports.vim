@@ -44,10 +44,12 @@ function! imports#get_import_context(imports_list, class_to_import) abort "{{{
         endif
     endfor
 
+    let is_dup = search('\vimport[[:space:]]+' . a:class_to_import . ';', 'cwn') != 0
+
     call sort(imports, "imports#sort_by_score")
-    let linebefore = imports[0]['line']
+
+    let linebefore = imports#select_line_before(imports[0]['line'], a:class_to_import)
     let empty_line = imports#needs_empty_line(imports, linebefore, a:class_to_import)
-    let is_dup = imports#is_dup(linebefore, a:class_to_import)
 
 
     return {'linebefore': linebefore,
@@ -56,19 +58,15 @@ function! imports#get_import_context(imports_list, class_to_import) abort "{{{
                 \ 'dup': is_dup}
 endfunction "}}}
 
-function! imports#sort_by_score(one, another) abort "{{{
-    return a:another['score'] - a:one['score']
+fun! imports#select_line_before(line_first_import, class_to_import) "{{{
+    if 'import ' . a:class_to_import . ';' < getline(a:line_first_import)
+        return a:line_first_import - 1
+    endif
+    return a:line_first_import
 endfunction "}}}
 
-fun! imports#is_dup(linebefore, class_to_import) "{{{
-    let start_line = a:linebefore
-    let end_line = a:linebefore + 3
-    let lines = []
-    for line_number in range(start_line, end_line)
-        call add(lines, imports#class_from_import_line(line_number))
-    endfor
-
-    return !empty(filter(lines, "v:val !~ '\v^\s*$' && v:val == '" . a:class_to_import . "'"))
+function! imports#sort_by_score(one, another) abort "{{{
+    return a:another['score'] - a:one['score']
 endfunction "}}}
 
 function! imports#getblocks() abort "{{{
@@ -97,6 +95,11 @@ function! imports#getblocks() abort "{{{
 endfunction "}}}
 
 function! imports#needs_empty_line(imports, linebefore, class_to_import) "{{{
+
+    if getline(a:linebefore) !~ '\v^import.+;.*'
+        return 0
+    endif
+
     let import_desc = filter(copy(a:imports), "v:val['line'] == " . a:linebefore)[0]
     let components = split(a:class_to_import, '\.', 0)
     let components_2 = split(import_desc['class'], '\.', 0)
@@ -123,4 +126,9 @@ fun! imports#insert_import_context(import_context) abort "{{{
         call append(a:import_context['linebefore'], '')
     endif
     call append(a:import_context['linebefore']+offset, import_line)
+endfunction "}}}
+
+fun! imports#insert_import(import) "{{{
+  let import_context = imports#get_import_context(imports#import_data(), a:import)
+  call imports#insert_import_context(import_context)
 endfunction "}}}
