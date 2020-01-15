@@ -25,7 +25,7 @@ function! imports#scan_file_line(line) abort "{{{
     if getline(a:line) > line('$')
         return 0
     endif
-    if a:line > 1000
+    if a:line > g:limit_for_scanning
         return 0
     endif
     return 1
@@ -48,7 +48,7 @@ function! imports#get_import_context(imports_list, class_to_import) abort "{{{
 
     call sort(imports, "imports#sort_by_score")
 
-    let linebefore = imports#select_line_before(imports[0]['line'], a:class_to_import)
+    let linebefore = imports#select_line_before(imports, a:class_to_import)
     let empty_line = imports#needs_empty_line(imports, linebefore, a:class_to_import)
 
 
@@ -58,11 +58,20 @@ function! imports#get_import_context(imports_list, class_to_import) abort "{{{
                 \ 'dup': is_dup}
 endfunction "}}}
 
-fun! imports#select_line_before(line_first_import, class_to_import) "{{{
-    if 'import ' . a:class_to_import . ';' < getline(a:line_first_import)
-        return a:line_first_import - 1
+fun! imports#select_line_before(imports, class_to_import) "{{{
+    if len(a:imports) == 0
+        let line_number = search('^package', 'cbn', 1, 3000)
+        if line_number == 0
+            throw 'Bad file format'
+        endif
+        return line_number
     endif
-    return a:line_first_import
+
+    let line_first_import = a:imports[0]['line']
+    if 'import ' . a:class_to_import . ';' < getline(line_first_import)
+        return line_first_import - 1
+    endif
+    return line_first_import
 endfunction "}}}
 
 function! imports#sort_by_score(one, another) abort "{{{
@@ -95,6 +104,10 @@ function! imports#getblocks() abort "{{{
 endfunction "}}}
 
 function! imports#needs_empty_line(imports, linebefore, class_to_import) "{{{
+
+    if getline(a:linebefore) =~ '\v^package.+'
+        return 1
+    endif
 
     if getline(a:linebefore) !~ '\v^import.+;.*'
         return 0
@@ -132,3 +145,5 @@ fun! imports#insert_import(import) "{{{
   let import_context = imports#get_import_context(imports#import_data(), a:import)
   call imports#insert_import_context(import_context)
 endfunction "}}}
+
+let g:limit_for_scanning = 1000

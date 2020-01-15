@@ -199,3 +199,37 @@ Expect:
   public class CompleteClazz {
   }
   
+Given (no imports for example):
+  package current.complete.example;
+
+  public class CompleteClazz {
+  }
+
+Execute (insert a new import):
+  call imports#insert_import('java.util.stream.Collectors')
+
+Expect:
+  package current.complete.example;
+
+  import java.util.stream.Collectors;
+  
+  public class CompleteClazz {
+  }
+
+Given (prevent incorrect extra lines):
+  package current.complete.example;
+
+  public class CompleteClazz {
+  }
+Execute (insert two imports):
+  call imports#insert_import('java.util.stream.Collectors')
+  call imports#insert_import('java.util.Arrays')
+
+Expect:
+  package current.complete.example;
+
+  import java.util.Arrays;
+  import java.util.stream.Collectors;
+  
+  public class CompleteClazz {
+  }
